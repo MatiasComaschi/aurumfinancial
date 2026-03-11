@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        heading: ['Fraunces', 'serif'],
+        body: ['DM Sans', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -47,15 +51,23 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+        income: "hsl(var(--income))",
+        expense: "hsl(var(--expense))",
+        net: "hsl(var(--net))",
+        cat: {
+          income: "hsl(var(--cat-income))",
+          housing: "hsl(var(--cat-housing))",
+          groceries: "hsl(var(--cat-groceries))",
+          subscriptions: "hsl(var(--cat-subscriptions))",
+          shopping: "hsl(var(--cat-shopping))",
+          dining: "hsl(var(--cat-dining))",
+          transportation: "hsl(var(--cat-transportation))",
+          health: "hsl(var(--cat-health))",
+          debt: "hsl(var(--cat-debt))",
+          utilities: "hsl(var(--cat-utilities))",
+          insurance: "hsl(var(--cat-insurance))",
+          savings: "hsl(var(--cat-savings))",
+          misc: "hsl(var(--cat-misc))",
         },
       },
       borderRadius: {
@@ -65,25 +77,22 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "pulse-gold": {
+          "0%, 100%": { boxShadow: "0 0 0 0 hsl(37 74% 67% / 0.4)" },
+          "50%": { boxShadow: "0 0 0 8px hsl(37 74% 67% / 0)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-gold": "pulse-gold 2s ease-in-out infinite",
       },
     },
   },

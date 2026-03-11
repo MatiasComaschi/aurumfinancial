@@ -1,0 +1,4 @@
+project_id = "zyjcxuulkmikxvhrxjhf"
+
+[functions.financial-advisor]
+verify_jwt = false
