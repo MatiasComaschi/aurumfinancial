@@ -105,8 +105,7 @@ export default function Index() {
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
     try {
-      const memoryBlock = buildMemoryBlock();
-      const result = await analyzeFinances(allTransactions, goals, memoryBlock);
+      const result = await analyzeFinances(allTransactions, goals);
       setAdviceSections(parseAdviceSections(result));
       setActiveTab('advice');
       toast.success('Analysis complete!');
