@@ -85,7 +85,7 @@ serve(async (req) => {
     }
 
     // Fetch transactions
-    const txRes = await fetch("https://sandbox.plaid.com/transactions/sync", {
+    const txRes = await fetch("https://production.plaid.com/transactions/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
