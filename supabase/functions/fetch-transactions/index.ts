@@ -83,7 +83,7 @@ serve(async (req) => {
             access_token: item.plaid_access_token,
             start_date: startDate,
             end_date: endDate,
-            options: { count: 500, offset: 0 },
+            options: { count: 500, offset: 0, include_personal_finance_category: true },
           }),
         });
 
