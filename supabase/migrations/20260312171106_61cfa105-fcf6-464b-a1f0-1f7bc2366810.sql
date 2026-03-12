@@ -1,0 +1,1 @@
+ALTER TABLE public.goals ADD COLUMN target_date date DEFAULT NULL;

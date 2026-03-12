@@ -119,6 +119,10 @@ export default function OverviewTab({
                 ? new Date(Date.now() + monthsLeft * 30 * 24 * 60 * 60 * 1000)
                 : null;
 
+              // Check if goal has a deadline
+              const deadlineDate = goal.target_date ? new Date(goal.target_date) : null;
+              const isOverdue = deadlineDate && deadlineDate < new Date() && remaining > 0;
+
               return (
                 <div key={goal.id} className="bg-card rounded-lg p-3">
                   <div className="flex justify-between items-baseline mb-1">
@@ -141,7 +145,13 @@ export default function OverviewTab({
                         : '🎉 Complete!'}
                     </span>
                   </div>
-                  {remaining > 0 && projectedDate && (
+                  {deadlineDate && remaining > 0 && (
+                    <p className={`text-xs mt-1 ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {isOverdue ? '⚠️ Overdue — ' : 'Due by '}
+                      {deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  )}
+                  {!deadlineDate && remaining > 0 && projectedDate && (
                     <p className="text-xs text-muted-foreground mt-1">
                       On track by ~{projectedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                     </p>

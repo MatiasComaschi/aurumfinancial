@@ -43,7 +43,7 @@ export function useGoals(accounts: PlaidAccount[]) {
     fetchGoals();
   }, [fetchGoals]);
 
-  const addGoal = async (name: string, targetAmount: number, currentAmount: number, linkedAccountId: string | null) => {
+  const addGoal = async (name: string, targetAmount: number, currentAmount: number, linkedAccountId: string | null, targetDate: string | null = null) => {
     if (!user) return;
     try {
       const { error } = await supabase.from('goals').insert({
@@ -52,7 +52,8 @@ export function useGoals(accounts: PlaidAccount[]) {
         target_amount: targetAmount,
         current_amount: currentAmount,
         linked_account_id: linkedAccountId || null,
-      });
+        target_date: targetDate,
+      } as any);
       if (error) throw error;
       toast.success('Goal created!');
       await fetchGoals();
@@ -61,9 +62,9 @@ export function useGoals(accounts: PlaidAccount[]) {
     }
   };
 
-  const updateGoal = async (id: string, updates: Partial<Pick<Goal, 'name' | 'target_amount' | 'current_amount' | 'linked_account_id'>>) => {
+  const updateGoal = async (id: string, updates: Partial<Pick<Goal, 'name' | 'target_amount' | 'current_amount' | 'linked_account_id' | 'target_date'>>) => {
     try {
-      const { error } = await supabase.from('goals').update(updates).eq('id', id);
+      const { error } = await supabase.from('goals').update(updates as any).eq('id', id);
       if (error) throw error;
       toast.success('Goal updated!');
       await fetchGoals();

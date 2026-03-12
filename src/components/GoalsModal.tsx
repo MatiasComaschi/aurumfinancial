@@ -1,25 +1,29 @@
 import { useState } from 'react';
-import { Goal, PlaidAccount, Transaction } from '@/lib/types';
+import { Goal, PlaidAccount } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 interface GoalsModalProps {
   open: boolean;
   onClose: () => void;
   goals: Goal[];
   accounts: PlaidAccount[];
-  onAdd: (name: string, target: number, current: number, linkedAccountId: string | null) => Promise<void>;
-  onUpdate: (id: string, updates: Partial<Pick<Goal, 'name' | 'target_amount' | 'current_amount' | 'linked_account_id'>>) => Promise<void>;
+  onAdd: (name: string, target: number, current: number, linkedAccountId: string | null, targetDate: string | null) => Promise<void>;
+  onUpdate: (id: string, updates: Partial<Pick<Goal, 'name' | 'target_amount' | 'current_amount' | 'linked_account_id' | 'target_date'>>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
 export default function GoalsModal({ open, onClose, goals, accounts, onAdd, onUpdate, onDelete }: GoalsModalProps) {
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: '', target: '', current: '', linkedAccountId: '' });
+  const [form, setForm] = useState({ name: '', target: '', current: '', linkedAccountId: '', targetDate: null as Date | null });
 
   const resetForm = () => {
-    setForm({ name: '', target: '', current: '', linkedAccountId: '' });
+    setForm({ name: '', target: '', current: '', linkedAccountId: '', targetDate: null });
     setEditing(null);
     setAdding(false);
   };
@@ -32,6 +36,7 @@ export default function GoalsModal({ open, onClose, goals, accounts, onAdd, onUp
       target: String(g.target_amount),
       current: String(g.current_amount),
       linkedAccountId: g.linked_account_id || '',
+      targetDate: g.target_date ? new Date(g.target_date) : null,
     });
   };
 
@@ -41,11 +46,12 @@ export default function GoalsModal({ open, onClose, goals, accounts, onAdd, onUp
     if (!form.name || isNaN(target) || target <= 0) return;
 
     const linkedId = form.linkedAccountId || null;
+    const targetDate = form.targetDate ? format(form.targetDate, 'yyyy-MM-dd') : null;
 
     if (editing) {
-      await onUpdate(editing, { name: form.name, target_amount: target, current_amount: current, linked_account_id: linkedId });
+      await onUpdate(editing, { name: form.name, target_amount: target, current_amount: current, linked_account_id: linkedId, target_date: targetDate });
     } else {
-      await onAdd(form.name, target, current, linkedId);
+      await onAdd(form.name, target, current, linkedId, targetDate);
     }
     resetForm();
   };
@@ -69,6 +75,11 @@ export default function GoalsModal({ open, onClose, goals, accounts, onAdd, onUp
                     <p className="text-xs text-muted-foreground">
                       ${g.current_amount.toLocaleString()} / ${g.target_amount.toLocaleString()}
                     </p>
+                    {g.target_date && (
+                      <p className="text-xs text-muted-foreground">
+                        Due by {format(new Date(g.target_date), 'MMM d, yyyy')}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-1">
                     <button onClick={() => startEdit(g)} className="p-1.5 text-muted-foreground hover:text-foreground">
@@ -108,6 +119,38 @@ export default function GoalsModal({ open, onClose, goals, accounts, onAdd, onUp
                   className="bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
                 />
               </div>
+
+              {/* Target Date Picker */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "w-full flex items-center gap-2 bg-background border border-border rounded-md px-3 py-2 text-sm text-left transition-colors focus:outline-none focus:ring-1 focus:ring-primary",
+                      !form.targetDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5" />
+                    {form.targetDate ? format(form.targetDate, 'MMM d, yyyy') : 'Target date (optional)'}
+                    {form.targetDate && (
+                      <X
+                        className="w-3.5 h-3.5 ml-auto hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); setForm(f => ({ ...f, targetDate: null })); }}
+                      />
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.targetDate || undefined}
+                    onSelect={(d) => setForm(f => ({ ...f, targetDate: d || null }))}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+
               {accounts.length > 0 && (
                 <select
                   value={form.linkedAccountId}
