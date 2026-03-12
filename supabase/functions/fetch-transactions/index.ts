@@ -63,7 +63,13 @@ serve(async (req) => {
       });
     }
 
-    const { data: plaidItems, error: dbError } = await supabase
+    // Use service role key to read access tokens — never expose them via user-scoped RLS
+    const serviceSupabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: plaidItems, error: dbError } = await serviceSupabase
       .from("plaid_items")
       .select("id, plaid_access_token, institution_name")
       .eq("user_id", user.id);
