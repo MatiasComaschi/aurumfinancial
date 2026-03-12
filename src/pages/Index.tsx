@@ -13,6 +13,7 @@ import AdviceTab from '@/components/AdviceTab';
 import AskTab from '@/components/AskTab';
 import PlaidLinkButton from '@/components/PlaidLinkButton';
 import GoalsModal from '@/components/GoalsModal';
+import SettingsTab from '@/components/SettingsTab';
 import { analyzeFinances, chatWithAdvisor, parseAdviceSections } from '@/lib/ai';
 import { ChatMessage } from '@/lib/types';
 
