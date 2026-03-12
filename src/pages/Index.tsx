@@ -122,6 +122,7 @@ export default function Index() {
             transactions={plaidTransactions}
             isLoading={isLoadingTransactions}
             error={transactionError}
+            onMarkAsBill={(merchant) => toggleBillOverride(merchant, true)}
           />
         )}
         {activeTab === 'advice' && <AdviceTab sections={adviceSections} isLoading={isAnalyzing} />}
