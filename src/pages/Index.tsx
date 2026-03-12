@@ -17,7 +17,7 @@ import SettingsTab from '@/components/SettingsTab';
 import { analyzeFinances, chatWithAdvisor, parseAdviceSections } from '@/lib/ai';
 import { ChatMessage } from '@/lib/types';
 
-type TabId = 'overview' | 'transactions' | 'advice' | 'ask';
+type TabId = 'overview' | 'transactions' | 'advice' | 'ask' | 'settings';
 
 export default function Index() {
   const { user, signOut } = useAuth();
