@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.exchange-plaid-token]
 verify_jwt = false
+
+[functions.fetch-transactions]
+verify_jwt = false

@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Building2, Link2, Loader2 } from 'lucide-react';
 
 interface PlaidLinkButtonProps {
-  onSuccess: (transactions: any[]) => void;
+  onSuccess: (publicToken: string, metadata: any) => void;
 }
 
 export default function PlaidLinkButton({ onSuccess }: PlaidLinkButtonProps) {
@@ -31,22 +31,9 @@ export default function PlaidLinkButton({ onSuccess }: PlaidLinkButtonProps) {
   };
 
   const onPlaidSuccess = useCallback(
-    async (publicToken: string, metadata: any) => {
-      try {
-        const { data, error } = await supabase.functions.invoke('exchange-plaid-token', {
-          body: {
-            public_token: publicToken,
-            institution: metadata.institution,
-          },
-        });
-        if (error) throw error;
-        toast.success(`${metadata.institution?.name || 'Bank'} linked successfully!`);
-        if (data.transactions) {
-          onSuccess(data.transactions);
-        }
-      } catch (err: any) {
-        toast.error('Failed to link account: ' + (err.message || 'Unknown error'));
-      }
+    (publicToken: string, metadata: any) => {
+      onSuccess(publicToken, metadata);
+      setLinkToken(null);
     },
     [onSuccess]
   );
