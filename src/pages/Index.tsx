@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlaidTransactions } from '@/hooks/usePlaidTransactions';
 import { useGoals } from '@/hooks/useGoals';
