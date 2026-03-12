@@ -120,7 +120,7 @@ export function usePlaidTransactions() {
     if (!user) return;
     const checkAndFetch = async () => {
       const { data, error } = await supabase
-        .from('plaid_items')
+        .from('plaid_items_safe')
         .select('id')
         .eq('user_id', user.id)
         .limit(1);

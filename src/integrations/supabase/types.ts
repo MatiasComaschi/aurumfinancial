@@ -202,7 +202,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      plaid_items_safe: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          institution_name: string | null
+          plaid_item_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          institution_name?: string | null
+          plaid_item_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          institution_name?: string | null
+          plaid_item_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
