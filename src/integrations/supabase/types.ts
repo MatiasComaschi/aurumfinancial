@@ -46,6 +46,7 @@ export type Database = {
           linked_account_id: string | null
           name: string
           target_amount: number
+          target_date: string | null
           updated_at: string
           user_id: string
         }
@@ -56,6 +57,7 @@ export type Database = {
           linked_account_id?: string | null
           name: string
           target_amount?: number
+          target_date?: string | null
           updated_at?: string
           user_id: string
         }
@@ -66,6 +68,7 @@ export type Database = {
           linked_account_id?: string | null
           name?: string
           target_amount?: number
+          target_date?: string | null
           updated_at?: string
           user_id?: string
         }
