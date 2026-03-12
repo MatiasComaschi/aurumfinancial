@@ -83,7 +83,7 @@ export function usePlaidTransactions() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const plaidTransactions = allTransactions.filter(t => t.date >= thirtyDaysAgo);
 
-  const fetchTransactions = useCallback(async () => {
+  const fetchTransactions = useCallback(async (showToast = false) => {
     if (!user) return;
     setIsLoadingTransactions(true);
     setTransactionError(null);
@@ -97,6 +97,10 @@ export function usePlaidTransactions() {
       setAccounts(data.accounts || []);
       setHasLinkedAccount(true);
 
+      if (showToast) {
+        toast.success(`Transactions updated — ${mapped.length} total`);
+      }
+
       if (data.errors?.length) {
         toast.warning(`Some accounts had issues: ${data.errors.join(', ')}`);
       }
@@ -104,6 +108,9 @@ export function usePlaidTransactions() {
       const msg = err.message || 'Failed to fetch transactions';
       setTransactionError(msg);
       console.error('fetch-transactions error:', err);
+      if (showToast) {
+        toast.error('Failed to refresh transactions. Please try again.');
+      }
     } finally {
       setIsLoadingTransactions(false);
     }
