@@ -9,15 +9,26 @@ export function formatTransactionsForAI(transactions: Transaction[]): string {
 
 export function formatGoalsForAI(goals: Goal[]): string {
   return goals
-    .map(g => `${g.name}: $${g.current_amount} saved of $${g.target_amount} goal`)
+    .map(g => {
+      let line = `${g.name}: $${g.current_amount} saved of $${g.target_amount} goal`;
+      if (g.target_date) line += ` (target date: ${g.target_date})`;
+      return line;
+    })
     .join('\n');
 }
 
-export async function analyzeFinances(transactions: Transaction[], goals: Goal[]): Promise<string> {
+export async function analyzeFinances(
+  transactions: Transaction[],
+  goals: Goal[],
+  memoryBlock: string
+): Promise<string> {
   const userMessage = `Here are my transactions for the past 60 days:\n${formatTransactionsForAI(transactions)}\n\nMy financial goals:\n${formatGoalsForAI(goals)}\n\nPlease give me a full financial analysis and advisor report.`;
 
   const { data, error } = await supabase.functions.invoke('financial-advisor', {
-    body: { messages: [{ role: 'user', content: userMessage }] },
+    body: {
+      messages: [{ role: 'user', content: userMessage }],
+      memoryBlock: memoryBlock || undefined,
+    },
   });
 
   if (error) throw new Error(error.message || 'Failed to analyze finances');
@@ -28,7 +39,8 @@ export async function chatWithAdvisor(
   transactions: Transaction[],
   goals: Goal[],
   chatHistory: ChatMessage[],
-  newMessage: string
+  newMessage: string,
+  memoryBlock: string
 ): Promise<string> {
   const contextMessage = `My transaction data (60 days):\n${formatTransactionsForAI(transactions)}\n\nMy goals:\n${formatGoalsForAI(goals)}`;
 
@@ -40,15 +52,38 @@ export async function chatWithAdvisor(
   ];
 
   const { data, error } = await supabase.functions.invoke('financial-advisor', {
-    body: { messages },
+    body: {
+      messages,
+      memoryBlock: memoryBlock || undefined,
+    },
   });
 
   if (error) throw new Error(error.message || 'Failed to get response');
   return data.content;
 }
 
+export async function extractMemories(userMessage: string): Promise<{ memory_type: string; content: string; context_date: string }[]> {
+  try {
+    const { data, error } = await supabase.functions.invoke('financial-advisor', {
+      body: { mode: 'extract_memory', userMessage },
+    });
+    if (error || !data?.memories) return [];
+    return data.memories;
+  } catch {
+    return [];
+  }
+}
+
 export function parseAdviceSections(text: string): { emoji: string; title: string; content: string }[] {
-  const headers = ['💰 CASH FLOW SNAPSHOT', '🚨 FLAGGED TRANSACTIONS', '📈 SAVINGS & GOALS', '💳 DEBT STRATEGY', '🌱 INVESTMENT PLAN', '✅ YOUR ACTION LIST (ranked by impact)'];
+  const headers = [
+    '💰 CASH FLOW SNAPSHOT',
+    '🚨 FLAGGED TRANSACTIONS',
+    '📈 SAVINGS & GOALS',
+    '💳 DEBT STRATEGY',
+    '🌱 INVESTMENT PLAN',
+    '📝 YOUR COMMITMENTS',
+    '✅ YOUR ACTION LIST (ranked by impact)',
+  ];
   const sections: { emoji: string; title: string; content: string }[] = [];
 
   for (let i = 0; i < headers.length; i++) {

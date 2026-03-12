@@ -128,6 +128,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_memory: {
+        Row: {
+          content: string
+          context_date: string | null
+          created_at: string
+          id: string
+          memory_type: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          context_date?: string | null
+          created_at?: string
+          id?: string
+          memory_type: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          context_date?: string | null
+          created_at?: string
+          id?: string
+          memory_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

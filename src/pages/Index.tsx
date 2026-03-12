@@ -4,19 +4,21 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePlaidTransactions } from '@/hooks/usePlaidTransactions';
 import { useGoals } from '@/hooks/useGoals';
 import { useBillOverrides } from '@/hooks/useBillOverrides';
+import { useMemories } from '@/hooks/useMemories';
 import { detectBills } from '@/lib/billDetection';
 import TabBar from '@/components/TabBar';
 import OverviewTab from '@/components/OverviewTab';
 import TransactionsTab from '@/components/TransactionsTab';
 import AdviceTab from '@/components/AdviceTab';
 import AskTab from '@/components/AskTab';
-
+import MemoryTab from '@/components/MemoryTab';
 import GoalsModal from '@/components/GoalsModal';
 import SettingsTab from '@/components/SettingsTab';
-import { analyzeFinances, chatWithAdvisor, parseAdviceSections } from '@/lib/ai';
+import { analyzeFinances, chatWithAdvisor, extractMemories, parseAdviceSections } from '@/lib/ai';
 import { ChatMessage } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
 
-type TabId = 'overview' | 'transactions' | 'advice' | 'ask' | 'settings';
+type TabId = 'overview' | 'transactions' | 'advice' | 'ask' | 'memory' | 'settings';
 
 export default function Index() {
   const { user, signOut } = useAuth();
@@ -33,6 +35,7 @@ export default function Index() {
 
   const { goals, addGoal, updateGoal, deleteGoal } = useGoals(accounts);
   const { overrides, toggleBillOverride } = useBillOverrides();
+  const { memories, isLoading: isLoadingMemories, addMemory, deleteMemory, fetchMemories, buildMemoryBlock } = useMemories();
 
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [goalsModalOpen, setGoalsModalOpen] = useState(false);
@@ -43,19 +46,16 @@ export default function Index() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
 
-  // Detect bills from full 60 days
   const bills = useMemo(
     () => detectBills(allTransactions, overrides),
     [allTransactions, overrides]
   );
 
-  // Average monthly savings rate from transaction history
   const avgMonthlySavings = useMemo(() => {
     if (allTransactions.length === 0) return 0;
     const income = allTransactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
     const spent = Math.abs(allTransactions.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0));
     const net = income - spent;
-    // Normalize to monthly (data is ~60 days)
     const dates = allTransactions.map(t => new Date(t.date).getTime());
     const daySpan = Math.max(1, (Math.max(...dates) - Math.min(...dates)) / (1000 * 60 * 60 * 24));
     return Math.max(0, (net / daySpan) * 30);
@@ -64,8 +64,8 @@ export default function Index() {
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
     try {
-      // Send full 60 days to AI
-      const result = await analyzeFinances(allTransactions, goals);
+      const memoryBlock = buildMemoryBlock();
+      const result = await analyzeFinances(allTransactions, goals, memoryBlock);
       setAdviceSections(parseAdviceSections(result));
       setActiveTab('advice');
       toast.success('Analysis complete!');
@@ -81,8 +81,26 @@ export default function Index() {
     setChatMessages(prev => [...prev, newUserMsg]);
     setIsChatLoading(true);
     try {
-      const reply = await chatWithAdvisor(allTransactions, goals, chatMessages, message);
+      const memoryBlock = buildMemoryBlock();
+      const reply = await chatWithAdvisor(allTransactions, goals, chatMessages, message, memoryBlock);
       setChatMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+
+      // Silent background memory extraction
+      if (user) {
+        extractMemories(message).then(async (extracted) => {
+          if (extracted.length > 0) {
+            for (const m of extracted) {
+              await supabase.from('user_memory').insert({
+                user_id: user.id,
+                memory_type: m.memory_type,
+                content: m.content,
+                context_date: m.context_date || new Date().toISOString(),
+              });
+            }
+            fetchMemories();
+          }
+        });
+      }
     } catch (e: any) {
       toast.error(e.message || 'Failed to get response');
     } finally {
@@ -128,6 +146,14 @@ export default function Index() {
         {activeTab === 'advice' && <AdviceTab sections={adviceSections} isLoading={isAnalyzing} />}
         {activeTab === 'ask' && (
           <AskTab messages={chatMessages} onSend={handleChatSend} isLoading={isChatLoading} />
+        )}
+        {activeTab === 'memory' && (
+          <MemoryTab
+            memories={memories}
+            isLoading={isLoadingMemories}
+            onAdd={addMemory}
+            onDelete={deleteMemory}
+          />
         )}
         {activeTab === 'settings' && (
           <SettingsTab
