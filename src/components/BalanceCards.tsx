@@ -1,22 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PlaidAccount } from '@/lib/types';
 import { Wallet, X } from 'lucide-react';
+
+const HIDDEN_ACCOUNTS_KEY = 'aurum-hidden-accounts';
+
+function loadHiddenIds(): Set<string> {
+  try {
+    const stored = localStorage.getItem(HIDDEN_ACCOUNTS_KEY);
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch { return new Set(); }
+}
 
 interface BalanceCardsProps {
   accounts: PlaidAccount[];
 }
 
 export default function BalanceCards({ accounts }: BalanceCardsProps) {
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(loadHiddenIds);
 
   const visibleAccounts = accounts.filter(a => !hiddenIds.has(a.account_id));
-
   if (visibleAccounts.length === 0) return null;
 
   const total = visibleAccounts.reduce((sum, a) => sum + (a.current_balance ?? 0), 0);
 
   const handleRemove = (accountId: string) => {
-    setHiddenIds(prev => new Set(prev).add(accountId));
+    setHiddenIds(prev => {
+      const next = new Set(prev).add(accountId);
+      localStorage.setItem(HIDDEN_ACCOUNTS_KEY, JSON.stringify([...next]));
+      return next;
+    });
   };
 
   return (
