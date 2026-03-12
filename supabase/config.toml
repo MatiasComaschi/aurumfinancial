@@ -2,3 +2,9 @@ project_id = "zyjcxuulkmikxvhrxjhf"
 
 [functions.financial-advisor]
 verify_jwt = false
+
+[functions.create-link-token]
+verify_jwt = false
+
+[functions.exchange-plaid-token]
+verify_jwt = false
