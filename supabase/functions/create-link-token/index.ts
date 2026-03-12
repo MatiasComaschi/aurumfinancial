@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,10 +17,35 @@ serve(async (req) => {
     const PLAID_SECRET = Deno.env.get("PLAID_SECRET");
 
     if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
-      throw new Error("Plaid credentials not configured");
+      console.error("Plaid credentials not configured");
+      return new Response(JSON.stringify({ error: "Service not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const { user_id } = await req.json();
+    // Authenticate the user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const response = await fetch("https://production.plaid.com/link/token/create", {
       method: "POST",
@@ -27,7 +53,7 @@ serve(async (req) => {
       body: JSON.stringify({
         client_id: PLAID_CLIENT_ID,
         secret: PLAID_SECRET,
-        user: { client_user_id: user_id },
+        user: { client_user_id: user.id },
         client_name: "Aurum Financial Advisor",
         products: ["transactions"],
         country_codes: ["US"],
@@ -39,7 +65,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       console.error("Plaid error:", JSON.stringify(data));
-      return new Response(JSON.stringify({ error: data.error_message || "Plaid error" }), {
+      return new Response(JSON.stringify({ error: "Unable to connect to banking service" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -51,7 +77,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("create-link-token error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Something went wrong. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -40,12 +40,12 @@ export default function PlaidLinkButton({ onSuccess }: PlaidLinkButtonProps) {
     setIsCreatingToken(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-link-token', {
-        body: { user_id: user.id },
+        body: {},
       });
       if (error) throw error;
       setLinkToken(data.link_token);
     } catch (err: any) {
-      toast.error('Failed to initialize Plaid: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to connect to banking service. Please try again.');
     } finally {
       setIsCreatingToken(false);
     }

@@ -17,7 +17,11 @@ serve(async (req) => {
     const PLAID_SECRET = Deno.env.get("PLAID_SECRET");
 
     if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
-      throw new Error("Plaid credentials not configured");
+      console.error("Plaid credentials not configured");
+      return new Response(JSON.stringify({ error: "Service not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const authHeader = req.headers.get("Authorization");
@@ -60,7 +64,7 @@ serve(async (req) => {
 
     if (!exchangeRes.ok) {
       console.error("Plaid exchange error:", JSON.stringify(exchangeData));
-      return new Response(JSON.stringify({ error: exchangeData.error_message || "Exchange failed" }), {
+      return new Response(JSON.stringify({ error: "Unable to link your bank account. Please try again." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -105,13 +109,12 @@ serve(async (req) => {
 
     if (!txRes.ok) {
       console.error("Plaid transactions/get error:", JSON.stringify(txData));
-      // Still return success for the link, just no transactions yet
       return new Response(
         JSON.stringify({
           success: true,
           item_id: exchangeData.item_id,
           transactions: [],
-          transactions_error: txData.error_message || "Transactions not yet available. Try refreshing in a moment.",
+          transactions_error: "Transactions not yet available. Try refreshing in a moment.",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -129,7 +132,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("exchange-token error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Something went wrong. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
