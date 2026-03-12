@@ -20,7 +20,6 @@ serve(async (req) => {
       throw new Error("Plaid credentials not configured");
     }
 
-    // Validate auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -35,16 +34,15 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
     const { public_token, institution } = await req.json();
 
     // Exchange public token for access token
@@ -84,24 +82,47 @@ serve(async (req) => {
       });
     }
 
-    // Fetch transactions
-    const txRes = await fetch("https://production.plaid.com/transactions/sync", {
+    // Fetch transactions for last 30 days using transactions/get
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const startDate = thirtyDaysAgo.toISOString().split("T")[0];
+    const endDate = now.toISOString().split("T")[0];
+
+    const txRes = await fetch("https://production.plaid.com/transactions/get", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         client_id: PLAID_CLIENT_ID,
         secret: PLAID_SECRET,
         access_token: exchangeData.access_token,
+        start_date: startDate,
+        end_date: endDate,
+        options: { count: 500, offset: 0 },
       }),
     });
 
     const txData = await txRes.json();
 
+    if (!txRes.ok) {
+      console.error("Plaid transactions/get error:", JSON.stringify(txData));
+      // Still return success for the link, just no transactions yet
+      return new Response(
+        JSON.stringify({
+          success: true,
+          item_id: exchangeData.item_id,
+          transactions: [],
+          transactions_error: txData.error_message || "Transactions not yet available. Try refreshing in a moment.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         item_id: exchangeData.item_id,
-        transactions: txData.added || [],
+        transactions: txData.transactions || [],
+        total_transactions: txData.total_transactions || 0,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

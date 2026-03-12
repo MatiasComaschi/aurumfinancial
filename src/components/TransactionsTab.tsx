@@ -1,14 +1,46 @@
 import { Transaction, CATEGORY_COLORS } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 interface TransactionsTabProps {
   transactions: Transaction[];
+  isLoading?: boolean;
+  error?: string | null;
 }
 
-export default function TransactionsTab({ transactions }: TransactionsTabProps) {
+export default function TransactionsTab({ transactions, isLoading, error }: TransactionsTabProps) {
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <Loader2 className="w-6 h-6 animate-spin mb-3" />
+        <p className="text-sm font-body">Loading transactions...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <AlertCircle className="w-6 h-6 text-destructive mb-3" />
+        <p className="text-sm font-heading text-destructive">Failed to load transactions</p>
+        <p className="text-xs text-muted-foreground mt-1 max-w-[300px] text-center">{error}</p>
+      </div>
+    );
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <p className="text-sm font-body">No transactions yet. Link a bank account to get started.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-1 pb-4">
-      <h2 className="text-sm font-body text-muted-foreground mb-3">All Transactions</h2>
+      <h2 className="text-sm font-body text-muted-foreground mb-3">
+        All Transactions ({transactions.length})
+      </h2>
       {transactions.map(t => (
         <div key={t.id} className="flex items-center gap-3 bg-card rounded-lg p-3">
           <span
