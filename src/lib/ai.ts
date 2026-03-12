@@ -9,12 +9,12 @@ export function formatTransactionsForAI(transactions: Transaction[]): string {
 
 export function formatGoalsForAI(goals: Goal[]): string {
   return goals
-    .map(g => `${g.name}: $${g.current} saved of $${g.target} goal`)
+    .map(g => `${g.name}: $${g.current_amount} saved of $${g.target_amount} goal`)
     .join('\n');
 }
 
 export async function analyzeFinances(transactions: Transaction[], goals: Goal[]): Promise<string> {
-  const userMessage = `Here are my transactions for this month:\n${formatTransactionsForAI(transactions)}\n\nMy financial goals:\n${formatGoalsForAI(goals)}\n\nPlease give me a full financial analysis and advisor report.`;
+  const userMessage = `Here are my transactions for the past 60 days:\n${formatTransactionsForAI(transactions)}\n\nMy financial goals:\n${formatGoalsForAI(goals)}\n\nPlease give me a full financial analysis and advisor report.`;
 
   const { data, error } = await supabase.functions.invoke('financial-advisor', {
     body: { messages: [{ role: 'user', content: userMessage }] },
@@ -30,7 +30,7 @@ export async function chatWithAdvisor(
   chatHistory: ChatMessage[],
   newMessage: string
 ): Promise<string> {
-  const contextMessage = `My transaction data:\n${formatTransactionsForAI(transactions)}\n\nMy goals:\n${formatGoalsForAI(goals)}`;
+  const contextMessage = `My transaction data (60 days):\n${formatTransactionsForAI(transactions)}\n\nMy goals:\n${formatGoalsForAI(goals)}`;
 
   const messages: ChatMessage[] = [
     { role: 'user', content: contextMessage },

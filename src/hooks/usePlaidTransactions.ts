@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Transaction } from '@/lib/types';
+import { Transaction, PlaidAccount } from '@/lib/types';
 import { toast } from 'sonner';
 
 function mapPlaidTransaction(t: any, i: number): Transaction {
-  const amount = -(t.amount || 0); // Plaid: positive = debit, we flip
+  const amount = -(t.amount || 0);
   return {
     id: `plaid-${t.transaction_id || i}-${t.date}`,
     date: t.date || new Date().toISOString().split('T')[0],
@@ -37,10 +37,15 @@ function mapPlaidCategory(plaidCategory: string): Transaction['category'] {
 
 export function usePlaidTransactions() {
   const { user } = useAuth();
-  const [plaidTransactions, setPlaidTransactions] = useState<Transaction[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]); // full 60 days
+  const [accounts, setAccounts] = useState<PlaidAccount[]>([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [transactionError, setTransactionError] = useState<string | null>(null);
   const [hasLinkedAccount, setHasLinkedAccount] = useState(false);
+
+  // UI transactions = last 30 days only
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const plaidTransactions = allTransactions.filter(t => t.date >= thirtyDaysAgo);
 
   const fetchTransactions = useCallback(async () => {
     if (!user) return;
@@ -52,7 +57,8 @@ export function usePlaidTransactions() {
       if (data.error) throw new Error(data.error);
 
       const mapped = (data.transactions || []).map(mapPlaidTransaction);
-      setPlaidTransactions(mapped);
+      setAllTransactions(mapped);
+      setAccounts(data.accounts || []);
       setHasLinkedAccount(true);
 
       if (data.errors?.length) {
@@ -67,7 +73,6 @@ export function usePlaidTransactions() {
     }
   }, [user]);
 
-  // Check for linked accounts on mount
   useEffect(() => {
     if (!user) return;
     const checkAndFetch = async () => {
@@ -97,15 +102,8 @@ export function usePlaidTransactions() {
       if (data.error) throw new Error(data.error);
 
       toast.success(`${metadata.institution?.name || 'Bank'} linked successfully!`);
-
-      const mapped = (data.transactions || []).map(mapPlaidTransaction);
-      if (mapped.length > 0) {
-        setPlaidTransactions(mapped);
-      } else if (data.transactions_error) {
-        toast.info('Transactions may take a moment to become available. Try refreshing shortly.');
-        // Auto-retry after a delay
-        setTimeout(() => fetchTransactions(), 5000);
-      }
+      // Immediately fetch all data
+      setTimeout(() => fetchTransactions(), 2000);
       setHasLinkedAccount(true);
     } catch (err: any) {
       toast.error('Failed to link account: ' + (err.message || 'Unknown error'));
@@ -113,7 +111,9 @@ export function usePlaidTransactions() {
   }, [fetchTransactions]);
 
   return {
-    plaidTransactions,
+    plaidTransactions, // 30 days for UI
+    allTransactions, // 60 days for AI/bills
+    accounts,
     isLoadingTransactions,
     transactionError,
     hasLinkedAccount,

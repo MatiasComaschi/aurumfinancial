@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      bill_overrides: {
+        Row: {
+          created_at: string
+          id: string
+          is_bill: boolean
+          merchant_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_bill?: boolean
+          merchant_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_bill?: boolean
+          merchant_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          created_at: string
+          current_amount: number
+          id: string
+          linked_account_id: string | null
+          name: string
+          target_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_amount?: number
+          id?: string
+          linked_account_id?: string | null
+          name: string
+          target_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_amount?: number
+          id?: string
+          linked_account_id?: string | null
+          name?: string
+          target_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_linked_account_id_fkey"
+            columns: ["linked_account_id"]
+            isOneToOne: false
+            referencedRelation: "plaid_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plaid_items: {
         Row: {
           created_at: string

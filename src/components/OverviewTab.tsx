@@ -1,26 +1,38 @@
-import { Transaction, Goal, CATEGORY_COLORS, CategoryType } from '@/lib/types';
-import { Sparkles, RefreshCw, Loader2, AlertCircle } from 'lucide-react';
+import { Transaction, Goal, PlaidAccount, DetectedBill, CATEGORY_COLORS, CategoryType } from '@/lib/types';
+import { Sparkles, RefreshCw, Loader2, AlertCircle, Settings2, Target } from 'lucide-react';
+import BalanceCards from './BalanceCards';
+import BillsSection from './BillsSection';
 
 interface OverviewTabProps {
   transactions: Transaction[];
   goals: Goal[];
+  accounts: PlaidAccount[];
+  bills: DetectedBill[];
   onAnalyze: () => void;
   isAnalyzing: boolean;
   onRefresh: () => void;
   isLoadingTransactions: boolean;
   transactionError: string | null;
   hasLinkedAccount: boolean;
+  onManageGoals: () => void;
+  onToggleBill: (merchant: string, isBill: boolean) => void;
+  avgMonthlySavings: number;
 }
 
 export default function OverviewTab({
   transactions,
   goals,
+  accounts,
+  bills,
   onAnalyze,
   isAnalyzing,
   onRefresh,
   isLoadingTransactions,
   transactionError,
   hasLinkedAccount,
+  onManageGoals,
+  onToggleBill,
+  avgMonthlySavings,
 }: OverviewTabProps) {
   const income = transactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
   const spent = Math.abs(transactions.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0));
@@ -37,7 +49,6 @@ export default function OverviewTab({
 
   return (
     <div className="space-y-6 pb-4">
-      {/* Loading state */}
       {isLoadingTransactions && (
         <div className="flex items-center gap-2 bg-card rounded-lg p-4 text-sm text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -45,22 +56,19 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* Error state */}
       {transactionError && (
         <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-sm text-destructive">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <div>
             <p className="font-heading">Failed to load transactions</p>
             <p className="text-xs mt-1 opacity-80">{transactionError}</p>
-            <button
-              onClick={onRefresh}
-              className="text-xs mt-2 underline hover:no-underline"
-            >
-              Try again
-            </button>
+            <button onClick={onRefresh} className="text-xs mt-2 underline hover:no-underline">Try again</button>
           </div>
         </div>
       )}
+
+      {/* Balances */}
+      <BalanceCards accounts={accounts} />
 
       {/* Stat Cards */}
       <div className="grid grid-cols-3 gap-3">
@@ -69,7 +77,7 @@ export default function OverviewTab({
         <StatCard label="Net" value={net} color="text-primary" />
       </div>
 
-      {/* Refresh button */}
+      {/* Refresh */}
       {hasLinkedAccount && (
         <button
           onClick={onRefresh}
@@ -83,31 +91,72 @@ export default function OverviewTab({
 
       {/* Goals */}
       <section>
-        <h2 className="text-sm font-body text-muted-foreground mb-3">Goal Progress</h2>
-        <div className="space-y-3">
-          {goals.map(goal => {
-            const pct = Math.min((goal.current / goal.target) * 100, 100);
-            return (
-              <div key={goal.id} className="bg-card rounded-lg p-3">
-                <div className="flex justify-between items-baseline mb-2">
-                  <span className="text-sm font-body text-foreground">{goal.name}</span>
-                  <span className="text-xs font-heading text-primary">
-                    ${goal.current.toLocaleString()} / ${goal.target.toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-body text-muted-foreground flex items-center gap-1.5">
+            <Target className="w-3.5 h-3.5" />
+            Goal Progress
+          </h2>
+          <button
+            onClick={onManageGoals}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Settings2 className="w-3 h-3" />
+            Manage
+          </button>
         </div>
+        {goals.length === 0 ? (
+          <div className="bg-card rounded-lg p-4 text-center">
+            <p className="text-sm text-muted-foreground">No goals yet.</p>
+            <button onClick={onManageGoals} className="text-xs text-primary mt-1 hover:underline">Create your first goal</button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {goals.map(goal => {
+              const pct = goal.target_amount > 0 ? Math.min((goal.current_amount / goal.target_amount) * 100, 100) : 0;
+              const remaining = Math.max(0, goal.target_amount - goal.current_amount);
+              const monthsLeft = avgMonthlySavings > 0 ? remaining / avgMonthlySavings : null;
+              const projectedDate = monthsLeft !== null
+                ? new Date(Date.now() + monthsLeft * 30 * 24 * 60 * 60 * 1000)
+                : null;
+
+              return (
+                <div key={goal.id} className="bg-card rounded-lg p-3">
+                  <div className="flex justify-between items-baseline mb-1">
+                    <span className="text-sm font-body text-foreground">{goal.name}</span>
+                    <span className="text-xs font-heading text-primary">
+                      {pct.toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="h-2 bg-secondary rounded-full overflow-hidden mb-2">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>${goal.current_amount.toLocaleString()} / ${goal.target_amount.toLocaleString()}</span>
+                    <span>
+                      {remaining > 0
+                        ? `$${remaining.toLocaleString()} to go`
+                        : '🎉 Complete!'}
+                    </span>
+                  </div>
+                  {remaining > 0 && projectedDate && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      On track by ~{projectedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
-      {/* Spending Categories */}
+      {/* Bills */}
+      <BillsSection bills={bills} onToggleBill={onToggleBill} />
+
+      {/* Top Spending */}
       {sortedCategories.length > 0 && (
         <section>
           <h2 className="text-sm font-body text-muted-foreground mb-3">Top Spending</h2>
