@@ -223,7 +223,7 @@ export default function Index() {
             accounts={accounts}
             onPlaidSuccess={handlePlaidSuccess}
             onSignOut={signOut}
-            onRefreshTransactions={fetchTransactions}
+            onRefreshTransactions={() => fetchTransactions(true)}
             hiddenAccountIds={hiddenAccountIds}
             onToggleAccountVisibility={toggleAccountVisibility}
           />
