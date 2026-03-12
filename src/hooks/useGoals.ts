@@ -62,7 +62,7 @@ export function useGoals(accounts: PlaidAccount[]) {
     }
   };
 
-  const updateGoal = async (id: string, updates: Partial<Pick<Goal, 'name' | 'target_amount' | 'current_amount' | 'linked_account_id'>>) => {
+  const updateGoal = async (id: string, updates: Partial<Pick<Goal, 'name' | 'target_amount' | 'current_amount' | 'linked_account_id' | 'target_date'>>) => {
     try {
       const { error } = await supabase.from('goals').update(updates).eq('id', id);
       if (error) throw error;
