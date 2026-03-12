@@ -1,14 +1,15 @@
 import { Transaction, CATEGORY_COLORS } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Receipt } from 'lucide-react';
 
 interface TransactionsTabProps {
   transactions: Transaction[];
   isLoading?: boolean;
   error?: string | null;
+  onMarkAsBill?: (merchant: string) => void;
 }
 
-export default function TransactionsTab({ transactions, isLoading, error }: TransactionsTabProps) {
+export default function TransactionsTab({ transactions, isLoading, error, onMarkAsBill }: TransactionsTabProps) {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -60,6 +61,15 @@ export default function TransactionsTab({ transactions, isLoading, error }: Tran
           >
             {t.amount > 0 ? '+' : '-'}${Math.abs(t.amount).toFixed(2)}
           </span>
+          {t.amount < 0 && onMarkAsBill && (
+            <button
+              onClick={() => onMarkAsBill(t.merchant)}
+              className="p-1.5 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+              title="Mark as recurring bill"
+            >
+              <Receipt className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       ))}
     </div>
