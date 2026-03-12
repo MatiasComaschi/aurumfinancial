@@ -7,6 +7,23 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Map Plaid error codes to safe user-facing messages
+const PLAID_ERROR_MESSAGES: Record<string, string> = {
+  ITEM_LOGIN_REQUIRED: "Your bank connection needs re-authentication. Please re-link your account.",
+  ACCESS_NOT_GRANTED: "Bank access was not granted. Please try linking again.",
+  INSTITUTION_DOWN: "Your bank is temporarily unavailable. Please try again later.",
+  INSTITUTION_NOT_RESPONDING: "Your bank is not responding. Please try again later.",
+  ITEM_NOT_FOUND: "Bank connection not found. Please re-link your account.",
+  PRODUCTS_NOT_READY: "Transaction data is still being prepared. Please try again in a few minutes.",
+};
+
+function getSafeErrorMessage(plaidError: any): string {
+  if (plaidError?.error_code && PLAID_ERROR_MESSAGES[plaidError.error_code]) {
+    return PLAID_ERROR_MESSAGES[plaidError.error_code];
+  }
+  return "Unable to fetch account data. Please try again later.";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -17,7 +34,11 @@ serve(async (req) => {
     const PLAID_SECRET = Deno.env.get("PLAID_SECRET");
 
     if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
-      throw new Error("Plaid credentials not configured");
+      console.error("Plaid credentials not configured");
+      return new Response(JSON.stringify({ error: "Service not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const authHeader = req.headers.get("Authorization");
@@ -73,7 +94,6 @@ serve(async (req) => {
 
     for (const item of plaidItems) {
       try {
-        // Fetch transactions (60 days)
         const txRes = await fetch("https://production.plaid.com/transactions/get", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -91,13 +111,12 @@ serve(async (req) => {
 
         if (!txRes.ok) {
           console.error(`Plaid error for ${item.institution_name}:`, JSON.stringify(txData));
-          errors.push(`${item.institution_name}: ${txData.error_message || "Failed to fetch"}`);
+          errors.push(`${item.institution_name}: ${getSafeErrorMessage(txData)}`);
           continue;
         }
 
         allTransactions = allTransactions.concat(txData.transactions || []);
 
-        // Map accounts with institution info and plaid_item db id
         if (txData.accounts) {
           for (const acct of txData.accounts) {
             allAccounts.push({
@@ -108,13 +127,13 @@ serve(async (req) => {
               current_balance: acct.balances?.current ?? null,
               available_balance: acct.balances?.available ?? null,
               institution_name: item.institution_name,
-              plaid_item_id: item.id, // our DB id
+              plaid_item_id: item.id,
             });
           }
         }
       } catch (err) {
         console.error(`Error fetching from ${item.institution_name}:`, err);
-        errors.push(`${item.institution_name}: ${err instanceof Error ? err.message : "Unknown error"}`);
+        errors.push(`${item.institution_name}: Unable to fetch account data.`);
       }
     }
 
@@ -130,7 +149,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("fetch-transactions error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Something went wrong. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

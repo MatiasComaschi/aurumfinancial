@@ -58,16 +58,16 @@ export default function SettingsTab({
     if (!confirm(`Unlink ${bank.institution_name || 'this bank'}? This will remove all associated transaction data.`)) return;
     setUnlinkingId(bank.id);
     try {
-      const { error } = await supabase
-        .from('plaid_items')
-        .delete()
-        .eq('id', bank.id);
+      const { data, error } = await supabase.functions.invoke('unlink-bank', {
+        body: { plaid_item_id: bank.id },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       toast.success(`${bank.institution_name || 'Bank'} unlinked`);
       fetchLinkedBanks();
       onRefreshTransactions();
     } catch (err: any) {
-      toast.error('Failed to unlink: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to unlink bank. Please try again.');
     } finally {
       setUnlinkingId(null);
     }
