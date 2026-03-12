@@ -34,7 +34,7 @@ export default function AuthPage() {
         toast.success('Check your email to confirm your account!');
       }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(safeAuthError(err.message));
     } finally {
       setLoading(false);
     }
@@ -54,10 +54,20 @@ export default function AuthPage() {
       if (error) throw error;
       setResetSent(true);
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(safeAuthError(err.message));
     } finally {
       setLoading(false);
     }
+  };
+
+  const safeAuthError = (msg: string): string => {
+    const map: Record<string, string> = {
+      'Invalid login credentials': 'Email or password is incorrect.',
+      'User already registered': 'An account with this email already exists. Try signing in.',
+      'Email not confirmed': 'Please confirm your email before signing in.',
+      'Signup requires a valid password': 'Please enter a valid password.',
+    };
+    return map[msg] ?? 'Something went wrong. Please try again.';
   };
 
   const handleGoogleSignIn = async () => {

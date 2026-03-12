@@ -105,8 +105,7 @@ export default function Index() {
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
     try {
-      const memoryBlock = buildMemoryBlock();
-      const result = await analyzeFinances(allTransactions, goals, memoryBlock);
+      const result = await analyzeFinances(allTransactions, goals);
       setAdviceSections(parseAdviceSections(result));
       setActiveTab('advice');
       toast.success('Analysis complete!');
@@ -122,8 +121,7 @@ export default function Index() {
     setChatMessages(prev => [...prev, newUserMsg]);
     setIsChatLoading(true);
     try {
-      const memoryBlock = buildMemoryBlock();
-      const reply = await chatWithAdvisor(allTransactions, goals, chatMessages, message, memoryBlock);
+      const reply = await chatWithAdvisor(allTransactions, goals, chatMessages, message);
       setChatMessages(prev => [...prev, { role: 'assistant', content: reply }]);
 
       if (user) {

@@ -70,8 +70,13 @@ serve(async (req) => {
       });
     }
 
-    // Store in database
-    const { error: dbError } = await supabase.from("plaid_items").insert({
+    // Store in database using service role to avoid exposing access token via RLS
+    const serviceSupabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { error: dbError } = await serviceSupabase.from("plaid_items").insert({
       user_id: userId,
       plaid_item_id: exchangeData.item_id,
       plaid_access_token: exchangeData.access_token,
