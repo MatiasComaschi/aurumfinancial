@@ -12,26 +12,27 @@ interface LinkedBank {
   created_at: string;
 }
 
-const HIDDEN_ACCOUNTS_KEY = 'aurum-hidden-accounts';
-
 interface SettingsTabProps {
   accounts: PlaidAccount[];
   onPlaidSuccess: (publicToken: string, metadata: any) => void;
   onSignOut: () => void;
   onRefreshTransactions: () => void;
+  hiddenAccountIds: Set<string>;
+  onToggleAccountVisibility: (accountId: string) => void;
 }
 
-export default function SettingsTab({ accounts, onPlaidSuccess, onSignOut, onRefreshTransactions }: SettingsTabProps) {
+export default function SettingsTab({
+  accounts,
+  onPlaidSuccess,
+  onSignOut,
+  onRefreshTransactions,
+  hiddenAccountIds,
+  onToggleAccountVisibility,
+}: SettingsTabProps) {
   const { user } = useAuth();
   const [linkedBanks, setLinkedBanks] = useState<LinkedBank[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => {
-    try {
-      const stored = localStorage.getItem(HIDDEN_ACCOUNTS_KEY);
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch { return new Set(); }
-  });
 
   const fetchLinkedBanks = async () => {
     if (!user) return;
@@ -70,19 +71,6 @@ export default function SettingsTab({ accounts, onPlaidSuccess, onSignOut, onRef
     } finally {
       setUnlinkingId(null);
     }
-  };
-
-  const toggleAccountVisibility = (accountId: string) => {
-    setHiddenIds(prev => {
-      const next = new Set(prev);
-      if (next.has(accountId)) {
-        next.delete(accountId);
-      } else {
-        next.add(accountId);
-      }
-      localStorage.setItem(HIDDEN_ACCOUNTS_KEY, JSON.stringify([...next]));
-      return next;
-    });
   };
 
   return (
@@ -147,7 +135,7 @@ export default function SettingsTab({ accounts, onPlaidSuccess, onSignOut, onRef
           </p>
           <div className="space-y-2">
             {accounts.map(acct => {
-              const isHidden = hiddenIds.has(acct.account_id);
+              const isHidden = hiddenAccountIds.has(acct.account_id);
               return (
                 <div key={acct.account_id} className="bg-card rounded-lg p-3 flex items-center justify-between">
                   <div className="min-w-0">
@@ -155,7 +143,7 @@ export default function SettingsTab({ accounts, onPlaidSuccess, onSignOut, onRef
                     <p className="text-xs text-muted-foreground">{acct.institution_name}</p>
                   </div>
                   <button
-                    onClick={() => toggleAccountVisibility(acct.account_id)}
+                    onClick={() => onToggleAccountVisibility(acct.account_id)}
                     className={`p-2 transition-colors ${isHidden ? 'text-muted-foreground hover:text-foreground' : 'text-primary hover:text-primary/80'}`}
                     title={isHidden ? 'Show account' : 'Hide account'}
                   >

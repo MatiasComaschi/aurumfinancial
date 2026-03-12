@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlaidTransactions } from '@/hooks/usePlaidTransactions';
 import { useGoals } from '@/hooks/useGoals';
 import { useBillOverrides } from '@/hooks/useBillOverrides';
 import { useMemories } from '@/hooks/useMemories';
+import { usePreferences } from '@/hooks/usePreferences';
 import { detectBills } from '@/lib/billDetection';
 import TabBar from '@/components/TabBar';
 import OverviewTab from '@/components/OverviewTab';
@@ -14,6 +15,7 @@ import AskTab from '@/components/AskTab';
 import MemoryTab from '@/components/MemoryTab';
 import GoalsModal from '@/components/GoalsModal';
 import SettingsTab from '@/components/SettingsTab';
+import OnboardingFlow from '@/components/OnboardingFlow';
 import { analyzeFinances, chatWithAdvisor, extractMemories, parseAdviceSections } from '@/lib/ai';
 import { ChatMessage } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +38,7 @@ export default function Index() {
   const { goals, addGoal, updateGoal, deleteGoal } = useGoals(accounts);
   const { overrides, toggleBillOverride } = useBillOverrides();
   const { memories, isLoading: isLoadingMemories, addMemory, deleteMemory, fetchMemories, buildMemoryBlock } = useMemories();
+  const { isLoaded: prefsLoaded, getPreference, setPreference } = usePreferences();
 
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [goalsModalOpen, setGoalsModalOpen] = useState(false);
@@ -45,6 +48,44 @@ export default function Index() {
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
+
+  // Account visibility from Supabase preferences
+  const hiddenAccountIds = useMemo(() => {
+    const raw = getPreference('hidden_accounts', '[]');
+    try {
+      return new Set<string>(JSON.parse(raw));
+    } catch {
+      return new Set<string>();
+    }
+  }, [getPreference]);
+
+  const toggleAccountVisibility = useCallback((accountId: string) => {
+    const newSet = new Set(hiddenAccountIds);
+    if (newSet.has(accountId)) {
+      newSet.delete(accountId);
+    } else {
+      newSet.add(accountId);
+    }
+    setPreference('hidden_accounts', JSON.stringify([...newSet]));
+  }, [hiddenAccountIds, setPreference]);
+
+  // Onboarding state
+  const onboardingComplete = getPreference('onboarding_complete', 'false') === 'true';
+  const onboardingStep = parseInt(getPreference('onboarding_step', '1'), 10);
+
+  const showOnboarding = prefsLoaded && !onboardingComplete && !hasLinkedAccount;
+
+  const handleOnboardingStepChange = (step: number) => {
+    setPreference('onboarding_step', String(step));
+  };
+
+  const handleOnboardingComplete = () => {
+    setPreference('onboarding_complete', 'true');
+  };
+
+  const handleOnboardingPlaidSuccess = (publicToken: string, metadata: any) => {
+    handlePlaidSuccess(publicToken, metadata);
+  };
 
   const bills = useMemo(
     () => detectBills(allTransactions, overrides),
@@ -85,7 +126,6 @@ export default function Index() {
       const reply = await chatWithAdvisor(allTransactions, goals, chatMessages, message, memoryBlock);
       setChatMessages(prev => [...prev, { role: 'assistant', content: reply }]);
 
-      // Silent background memory extraction
       if (user) {
         extractMemories(message).then(async (extracted) => {
           if (extracted.length > 0) {
@@ -110,6 +150,27 @@ export default function Index() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there';
 
+  // Don't render until preferences are loaded to avoid flicker
+  if (!prefsLoaded) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Show onboarding for new users without a linked bank
+  if (showOnboarding) {
+    return (
+      <OnboardingFlow
+        currentStep={onboardingStep}
+        onPlaidSuccess={handleOnboardingPlaidSuccess}
+        onComplete={handleOnboardingComplete}
+        onStepChange={handleOnboardingStepChange}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex justify-center">
       <div className="w-full max-w-[480px] px-4 pt-6 pb-20">
@@ -133,6 +194,8 @@ export default function Index() {
             onManageGoals={() => setGoalsModalOpen(true)}
             onToggleBill={toggleBillOverride}
             avgMonthlySavings={avgMonthlySavings}
+            hiddenAccountIds={hiddenAccountIds}
+            onHideAccount={toggleAccountVisibility}
           />
         )}
         {activeTab === 'transactions' && (
@@ -161,6 +224,8 @@ export default function Index() {
             onPlaidSuccess={handlePlaidSuccess}
             onSignOut={signOut}
             onRefreshTransactions={fetchTransactions}
+            hiddenAccountIds={hiddenAccountIds}
+            onToggleAccountVisibility={toggleAccountVisibility}
           />
         )}
 

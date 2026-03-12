@@ -17,6 +17,8 @@ interface OverviewTabProps {
   onManageGoals: () => void;
   onToggleBill: (merchant: string, isBill: boolean) => void;
   avgMonthlySavings: number;
+  hiddenAccountIds: Set<string>;
+  onHideAccount: (accountId: string) => void;
 }
 
 export default function OverviewTab({
@@ -33,6 +35,8 @@ export default function OverviewTab({
   onManageGoals,
   onToggleBill,
   avgMonthlySavings,
+  hiddenAccountIds,
+  onHideAccount,
 }: OverviewTabProps) {
   const income = transactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
   const spent = Math.abs(transactions.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0));
@@ -68,7 +72,7 @@ export default function OverviewTab({
       )}
 
       {/* Balances */}
-      <BalanceCards accounts={accounts} />
+      <BalanceCards accounts={accounts} hiddenAccountIds={hiddenAccountIds} onHideAccount={onHideAccount} />
 
       {/* Stat Cards */}
       <div className="grid grid-cols-3 gap-3">
@@ -119,7 +123,6 @@ export default function OverviewTab({
                 ? new Date(Date.now() + monthsLeft * 30 * 24 * 60 * 60 * 1000)
                 : null;
 
-              // Check if goal has a deadline
               const deadlineDate = goal.target_date ? new Date(goal.target_date) : null;
               const isOverdue = deadlineDate && deadlineDate < new Date() && remaining > 0;
 

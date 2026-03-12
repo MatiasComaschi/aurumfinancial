@@ -2,34 +2,17 @@ import { useState, useEffect } from 'react';
 import { PlaidAccount } from '@/lib/types';
 import { Wallet, X } from 'lucide-react';
 
-const HIDDEN_ACCOUNTS_KEY = 'aurum-hidden-accounts';
-
-function loadHiddenIds(): Set<string> {
-  try {
-    const stored = localStorage.getItem(HIDDEN_ACCOUNTS_KEY);
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  } catch { return new Set(); }
-}
-
 interface BalanceCardsProps {
   accounts: PlaidAccount[];
+  hiddenAccountIds: Set<string>;
+  onHideAccount: (accountId: string) => void;
 }
 
-export default function BalanceCards({ accounts }: BalanceCardsProps) {
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(loadHiddenIds);
-
-  const visibleAccounts = accounts.filter(a => !hiddenIds.has(a.account_id));
+export default function BalanceCards({ accounts, hiddenAccountIds, onHideAccount }: BalanceCardsProps) {
+  const visibleAccounts = accounts.filter(a => !hiddenAccountIds.has(a.account_id));
   if (visibleAccounts.length === 0) return null;
 
   const total = visibleAccounts.reduce((sum, a) => sum + (a.current_balance ?? 0), 0);
-
-  const handleRemove = (accountId: string) => {
-    setHiddenIds(prev => {
-      const next = new Set(prev).add(accountId);
-      localStorage.setItem(HIDDEN_ACCOUNTS_KEY, JSON.stringify([...next]));
-      return next;
-    });
-  };
 
   return (
     <section className="space-y-2">
@@ -49,7 +32,7 @@ export default function BalanceCards({ accounts }: BalanceCardsProps) {
                 ${(acct.current_balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <button
-                onClick={() => handleRemove(acct.account_id)}
+                onClick={() => onHideAccount(acct.account_id)}
                 className="p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
                 title="Hide account"
               >
