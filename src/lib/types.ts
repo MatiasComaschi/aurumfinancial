@@ -26,6 +26,7 @@ export interface Goal {
   linked_account_id: string | null;
   created_at: string;
   updated_at: string;
+  target_date: string | null;
 }
 
 export interface DetectedBill {

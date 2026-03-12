@@ -43,7 +43,7 @@ export function useGoals(accounts: PlaidAccount[]) {
     fetchGoals();
   }, [fetchGoals]);
 
-  const addGoal = async (name: string, targetAmount: number, currentAmount: number, linkedAccountId: string | null) => {
+  const addGoal = async (name: string, targetAmount: number, currentAmount: number, linkedAccountId: string | null, targetDate: string | null = null) => {
     if (!user) return;
     try {
       const { error } = await supabase.from('goals').insert({
