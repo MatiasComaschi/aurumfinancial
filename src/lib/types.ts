@@ -6,11 +6,38 @@ export interface Transaction {
   category: CategoryType;
 }
 
+export interface PlaidAccount {
+  account_id: string;
+  name: string;
+  type: string;
+  subtype: string;
+  current_balance: number | null;
+  available_balance: number | null;
+  institution_name: string;
+  plaid_item_id: string; // our DB uuid
+}
+
 export interface Goal {
   id: string;
+  user_id: string;
   name: string;
-  target: number;
-  current: number;
+  target_amount: number;
+  current_amount: number;
+  linked_account_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DetectedBill {
+  merchant: string;
+  category: string;
+  amount: number;
+  lastChargeDate: string;
+  expectedNextDate: string;
+  paidThisMonth: boolean;
+  amountChange: number | null; // positive = increased
+  signals: string[];
+  isUserOverride: boolean;
 }
 
 export type CategoryType =

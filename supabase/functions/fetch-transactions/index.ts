@@ -42,10 +42,9 @@ serve(async (req) => {
       });
     }
 
-    // Get all plaid items for this user
     const { data: plaidItems, error: dbError } = await supabase
       .from("plaid_items")
-      .select("plaid_access_token, institution_name")
+      .select("id, plaid_access_token, institution_name")
       .eq("user_id", user.id);
 
     if (dbError) {
@@ -58,21 +57,23 @@ serve(async (req) => {
 
     if (!plaidItems || plaidItems.length === 0) {
       return new Response(
-        JSON.stringify({ transactions: [], message: "No linked accounts found" }),
+        JSON.stringify({ transactions: [], accounts: [], message: "No linked accounts found" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const startDate = thirtyDaysAgo.toISOString().split("T")[0];
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+    const startDate = sixtyDaysAgo.toISOString().split("T")[0];
     const endDate = now.toISOString().split("T")[0];
 
     let allTransactions: any[] = [];
+    let allAccounts: any[] = [];
     const errors: string[] = [];
 
     for (const item of plaidItems) {
       try {
+        // Fetch transactions (60 days)
         const txRes = await fetch("https://production.plaid.com/transactions/get", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -95,6 +96,22 @@ serve(async (req) => {
         }
 
         allTransactions = allTransactions.concat(txData.transactions || []);
+
+        // Map accounts with institution info and plaid_item db id
+        if (txData.accounts) {
+          for (const acct of txData.accounts) {
+            allAccounts.push({
+              account_id: acct.account_id,
+              name: acct.name || acct.official_name || "Account",
+              type: acct.type,
+              subtype: acct.subtype,
+              current_balance: acct.balances?.current ?? null,
+              available_balance: acct.balances?.available ?? null,
+              institution_name: item.institution_name,
+              plaid_item_id: item.id, // our DB id
+            });
+          }
+        }
       } catch (err) {
         console.error(`Error fetching from ${item.institution_name}:`, err);
         errors.push(`${item.institution_name}: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -104,6 +121,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         transactions: allTransactions,
+        accounts: allAccounts,
         total: allTransactions.length,
         errors: errors.length > 0 ? errors : undefined,
       }),
