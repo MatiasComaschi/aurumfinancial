@@ -96,21 +96,9 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background flex justify-center">
       <div className="w-full max-w-[480px] px-4 pt-6 pb-20">
-        <header className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-heading text-primary">Aurum</h1>
-            <p className="text-xs font-body text-muted-foreground">Hey {displayName} 👋</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <PlaidLinkButton onSuccess={handlePlaidSuccess} />
-            <button
-              onClick={signOut}
-              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
-              title="Sign out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+        <header className="mb-6">
+          <h1 className="text-2xl font-heading text-primary">Aurum</h1>
+          <p className="text-xs font-body text-muted-foreground">Hey {displayName} 👋</p>
         </header>
 
         {activeTab === 'overview' && (
