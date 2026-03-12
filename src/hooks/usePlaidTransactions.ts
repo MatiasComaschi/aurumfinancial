@@ -17,20 +17,56 @@ function mapPlaidTransaction(t: any, i: number): Transaction {
 
 function mapPlaidCategory(plaidCategory: string): Transaction['category'] {
   const map: Record<string, Transaction['category']> = {
+    // Income
     INCOME: 'Income',
     TRANSFER_IN: 'Income',
+    // Housing
+    RENT_AND_UTILITIES: 'Housing',
     RENT: 'Housing',
     MORTGAGE: 'Housing',
-    FOOD_AND_DRINK: 'Dining',
+    HOME_IMPROVEMENT: 'Housing',
+    // Groceries
     GROCERIES: 'Groceries',
+    // Dining
+    FOOD_AND_DRINK: 'Dining',
+    RESTAURANTS: 'Dining',
+    COFFEE: 'Dining',
+    // Subscriptions
     ENTERTAINMENT: 'Subscriptions',
+    SUBSCRIPTION: 'Subscriptions',
+    DIGITAL_PURCHASE: 'Subscriptions',
+    // Shopping
     SHOPPING: 'Shopping',
+    GENERAL_MERCHANDISE: 'Shopping',
+    CLOTHING: 'Shopping',
+    ELECTRONICS: 'Shopping',
+    PERSONAL_CARE: 'Shopping',
+    // Transportation
     TRANSPORTATION: 'Transportation',
+    GAS: 'Transportation',
+    TRAVEL: 'Transportation',
+    TAXI: 'Transportation',
+    PARKING: 'Transportation',
+    PUBLIC_TRANSIT: 'Transportation',
+    // Health
     MEDICAL: 'Health',
+    HEALTHCARE: 'Health',
+    PHARMACY: 'Health',
+    FITNESS: 'Health',
+    // Debt
     LOAN_PAYMENTS: 'Debt',
+    CREDIT_CARD_PAYMENT: 'Debt',
+    BANK_FEES: 'Debt',
+    // Utilities
     UTILITIES: 'Utilities',
+    TELEPHONE: 'Utilities',
+    INTERNET: 'Utilities',
+    // Insurance
     INSURANCE: 'Insurance',
+    // Savings
     SAVINGS: 'Savings',
+    INVESTMENT: 'Savings',
+    TRANSFER_OUT: 'Savings',
   };
   return map[plaidCategory] || 'Misc';
 }
