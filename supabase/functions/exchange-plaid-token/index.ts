@@ -48,7 +48,7 @@ serve(async (req) => {
     const { public_token, institution } = await req.json();
 
     // Exchange public token for access token
-    const exchangeRes = await fetch("https://sandbox.plaid.com/item/public_token/exchange", {
+    const exchangeRes = await fetch("https://production.plaid.com/item/public_token/exchange", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
