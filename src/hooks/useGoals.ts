@@ -52,7 +52,8 @@ export function useGoals(accounts: PlaidAccount[]) {
         target_amount: targetAmount,
         current_amount: currentAmount,
         linked_account_id: linkedAccountId || null,
-      });
+        target_date: targetDate,
+      } as any);
       if (error) throw error;
       toast.success('Goal created!');
       await fetchGoals();
