@@ -121,8 +121,7 @@ export default function Index() {
     setChatMessages(prev => [...prev, newUserMsg]);
     setIsChatLoading(true);
     try {
-      const memoryBlock = buildMemoryBlock();
-      const reply = await chatWithAdvisor(allTransactions, goals, chatMessages, message, memoryBlock);
+      const reply = await chatWithAdvisor(allTransactions, goals, chatMessages, message);
       setChatMessages(prev => [...prev, { role: 'assistant', content: reply }]);
 
       if (user) {
