@@ -155,6 +155,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          id: string
+          preference_key: string
+          preference_value: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          preference_key: string
+          preference_value: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          preference_key?: string
+          preference_value?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

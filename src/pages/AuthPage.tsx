@@ -2,25 +2,26 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
 import { toast } from 'sonner';
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (isLogin) {
+      if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success('Welcome back!');
-      } else {
+      } else if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -39,6 +40,26 @@ export default function AuthPage() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error('Please enter your email address');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     const { error } = await lovable.auth.signInWithOAuth('google', {
       redirect_uri: window.location.origin,
@@ -47,6 +68,73 @@ export default function AuthPage() {
       toast.error(error.message || 'Google sign-in failed');
     }
   };
+
+  // Forgot password view
+  if (mode === 'forgot') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-[400px] space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-heading text-primary">Aurum</h1>
+            <p className="text-sm font-body text-muted-foreground mt-2">Reset your password</p>
+          </div>
+
+          <div className="bg-card rounded-xl p-6 space-y-6 border border-border">
+            {resetSent ? (
+              <div className="text-center space-y-4">
+                <div className="text-4xl">📬</div>
+                <h2 className="text-lg font-heading text-foreground">Check your email</h2>
+                <p className="text-sm font-body text-muted-foreground">
+                  We sent you a link to reset your password. Check your inbox for <span className="text-foreground">{email}</span>.
+                </p>
+                <button
+                  onClick={() => { setMode('login'); setResetSent(false); }}
+                  className="flex items-center gap-2 text-sm text-primary hover:underline mx-auto"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Back to sign in
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-lg font-heading text-foreground text-center">Forgot your password?</h2>
+                <p className="text-sm font-body text-muted-foreground text-center">
+                  Enter your email and we'll send you a link to reset it.
+                </p>
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="email"
+                      placeholder="Email address"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      required
+                      className="w-full bg-secondary rounded-lg pl-10 pr-4 py-3 text-sm font-body text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-primary text-primary-foreground rounded-lg py-3 text-sm font-heading disabled:opacity-50 transition-opacity"
+                  >
+                    {loading ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                </form>
+                <button
+                  onClick={() => setMode('login')}
+                  className="flex items-center gap-2 text-sm text-primary hover:underline mx-auto"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Back to sign in
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -60,10 +148,9 @@ export default function AuthPage() {
 
         <div className="bg-card rounded-xl p-6 space-y-6 border border-border">
           <h2 className="text-lg font-heading text-foreground text-center">
-            {isLogin ? 'Welcome back' : 'Create your account'}
+            {mode === 'login' ? 'Welcome back' : 'Create your account'}
           </h2>
 
-          {/* Google OAuth */}
           <button
             onClick={handleGoogleSignIn}
             className="w-full flex items-center justify-center gap-3 bg-secondary text-secondary-foreground rounded-lg py-3 px-4 text-sm font-body hover:bg-secondary/80 transition-colors"
@@ -83,9 +170,8 @@ export default function AuthPage() {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {/* Email/Password form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
-            {!isLogin && (
+            {mode === 'signup' && (
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
@@ -127,22 +213,33 @@ export default function AuthPage() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+
+            {mode === 'login' && (
+              <button
+                type="button"
+                onClick={() => setMode('forgot')}
+                className="text-xs text-primary hover:underline block ml-auto"
+              >
+                Forgot your password?
+              </button>
+            )}
+
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-primary text-primary-foreground rounded-lg py-3 text-sm font-heading disabled:opacity-50 transition-opacity"
             >
-              {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
+              {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
             </button>
           </form>
 
           <p className="text-center text-xs text-muted-foreground font-body">
-            {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+            {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
               className="text-primary hover:underline"
             >
-              {isLogin ? 'Sign up' : 'Sign in'}
+              {mode === 'login' ? 'Sign up' : 'Sign in'}
             </button>
           </p>
         </div>
