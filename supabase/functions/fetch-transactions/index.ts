@@ -100,43 +100,74 @@ serve(async (req) => {
 
     for (const item of plaidItems) {
       try {
-        const txRes = await fetch("https://production.plaid.com/transactions/get", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            client_id: PLAID_CLIENT_ID,
-            secret: PLAID_SECRET,
-            access_token: item.plaid_access_token,
-            start_date: startDate,
-            end_date: endDate,
-            options: { count: 500, offset: 0, include_personal_finance_category: true },
-          }),
-        });
-
-        const txData = await txRes.json();
-
-        if (!txRes.ok) {
-          console.error(`Plaid error for ${item.institution_name}:`, JSON.stringify(txData));
-          errors.push(`${item.institution_name}: ${getSafeErrorMessage(txData)}`);
-          continue;
+        // Force Plaid to refresh transactions from the bank
+        try {
+          await fetch("https://production.plaid.com/transactions/refresh", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: PLAID_CLIENT_ID,
+              secret: PLAID_SECRET,
+              access_token: item.plaid_access_token,
+            }),
+          });
+        } catch (refreshErr) {
+          console.error(`Refresh failed for ${item.institution_name}:`, refreshErr);
+          // Continue even if refresh fails — we'll still get cached data
         }
 
-        allTransactions = allTransactions.concat(txData.transactions || []);
+        // Fetch transactions with pagination
+        let offset = 0;
+        let totalTransactions = Infinity;
+        let itemTransactions: any[] = [];
 
-        if (txData.accounts) {
-          for (const acct of txData.accounts) {
-            allAccounts.push({
-              account_id: acct.account_id,
-              name: acct.name || acct.official_name || "Account",
-              type: acct.type,
-              subtype: acct.subtype,
-              current_balance: acct.balances?.current ?? null,
-              available_balance: acct.balances?.available ?? null,
-              institution_name: item.institution_name,
-              plaid_item_id: item.id,
-            });
+        while (offset < totalTransactions) {
+          const txRes = await fetch("https://production.plaid.com/transactions/get", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: PLAID_CLIENT_ID,
+              secret: PLAID_SECRET,
+              access_token: item.plaid_access_token,
+              start_date: startDate,
+              end_date: endDate,
+              options: { count: 500, offset, include_personal_finance_category: true },
+            }),
+          });
+
+          const txData = await txRes.json();
+
+          if (!txRes.ok) {
+            console.error(`Plaid error for ${item.institution_name}:`, JSON.stringify(txData));
+            errors.push(`${item.institution_name}: ${getSafeErrorMessage(txData)}`);
+            break;
           }
+
+          itemTransactions = itemTransactions.concat(txData.transactions || []);
+          totalTransactions = txData.total_transactions || 0;
+          offset += (txData.transactions || []).length;
+
+          // Map accounts only on first page
+          if (offset <= 500 && txData.accounts) {
+            for (const acct of txData.accounts) {
+              allAccounts.push({
+                account_id: acct.account_id,
+                name: acct.name || acct.official_name || "Account",
+                type: acct.type,
+                subtype: acct.subtype,
+                current_balance: acct.balances?.current ?? null,
+                available_balance: acct.balances?.available ?? null,
+                institution_name: item.institution_name,
+                plaid_item_id: item.id,
+              });
+            }
+          }
+
+          // Safety: don't fetch more than 2000 transactions per item
+          if (offset >= 2000) break;
         }
+
+        allTransactions = allTransactions.concat(itemTransactions);
       } catch (err) {
         console.error(`Error fetching from ${item.institution_name}:`, err);
         errors.push(`${item.institution_name}: Unable to fetch account data.`);
