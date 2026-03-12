@@ -14,7 +14,7 @@ export interface PlaidAccount {
   current_balance: number | null;
   available_balance: number | null;
   institution_name: string;
-  plaid_item_id: string; // our DB uuid
+  plaid_item_id: string;
 }
 
 export interface Goal {
@@ -36,9 +36,18 @@ export interface DetectedBill {
   lastChargeDate: string;
   expectedNextDate: string;
   paidThisMonth: boolean;
-  amountChange: number | null; // positive = increased
+  amountChange: number | null;
   signals: string[];
   isUserOverride: boolean;
+}
+
+export interface UserMemory {
+  id: string;
+  user_id: string;
+  memory_type: 'commitment' | 'goals_context' | 'habit' | 'preference' | 'life_context';
+  content: string;
+  context_date: string | null;
+  created_at: string;
 }
 
 export type CategoryType =

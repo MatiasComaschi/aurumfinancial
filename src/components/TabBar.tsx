@@ -1,12 +1,13 @@
-import { BarChart3, List, Lightbulb, MessageCircle, Settings } from 'lucide-react';
+import { BarChart3, List, Lightbulb, MessageCircle, Brain, Settings } from 'lucide-react';
 
-type TabId = 'overview' | 'transactions' | 'advice' | 'ask' | 'settings';
+type TabId = 'overview' | 'transactions' | 'advice' | 'ask' | 'memory' | 'settings';
 
 const tabs: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
-  { id: 'transactions', label: 'Transactions', icon: List },
+  { id: 'transactions', label: 'Txns', icon: List },
   { id: 'advice', label: 'Advice', icon: Lightbulb },
   { id: 'ask', label: 'Ask', icon: MessageCircle },
+  { id: 'memory', label: 'Memory', icon: Brain },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -23,13 +24,13 @@ export default function TabBar({ activeTab, onTabChange }: TabBarProps) {
           <button
             key={id}
             onClick={() => onTabChange(id)}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] transition-colors ${
               activeTab === id
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Icon className="w-5 h-5" />
+            <Icon className="w-4 h-4" />
             <span className="font-body">{label}</span>
           </button>
         ))}

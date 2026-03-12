@@ -53,9 +53,18 @@ Format your response with clear sections using these exact headers:
 📈 SAVINGS & GOALS
 💳 DEBT STRATEGY
 🌱 INVESTMENT PLAN
+📝 YOUR COMMITMENTS
 ✅ YOUR ACTION LIST (ranked by impact)
 
+For the 📝 YOUR COMMITMENTS section:
+- If the user has commitments in memory, cross-reference each one against the transaction data. For each commitment show what they said, when they said it, what the data shows since then, and a plain English verdict.
+- If they have no commitments yet, write: "Nothing here yet. Tell me something you want to work on in the Ask tab and I'll track it for you."
+
 Keep all content inside these sections following the plain English rules above.`;
+
+const MEMORY_EXTRACTION_PROMPT = `Look at this user message and extract any financial commitments, goals context, habits, preferences, or life context worth remembering long term. Return only a raw JSON array with no markdown, no backticks, no explanation. Shape: [{ "memory_type": "", "content": "", "context_date": "" }]. If nothing is worth remembering return an empty array []. Only save things genuinely useful weeks or months later. Ignore small talk, greetings, and one-off questions.
+
+User message: `;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -63,10 +72,56 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, mode, userMessage, memoryBlock } = await req.json();
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!ANTHROPIC_API_KEY) {
       throw new Error("ANTHROPIC_API_KEY is not configured");
+    }
+
+    // Memory extraction mode — lightweight call
+    if (mode === "extract_memory") {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 500,
+          messages: [{ role: "user", content: MEMORY_EXTRACTION_PROMPT + userMessage }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Anthropic API error (extraction):", response.status, errorText);
+        return new Response(
+          JSON.stringify({ memories: [] }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const data = await response.json();
+      const text = data.content?.[0]?.text || "[]";
+      
+      try {
+        const memories = JSON.parse(text);
+        return new Response(JSON.stringify({ memories }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch {
+        return new Response(JSON.stringify({ memories: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Normal chat/analysis mode — inject memory block into system prompt
+    let systemPrompt = SYSTEM_PROMPT;
+    if (memoryBlock) {
+      systemPrompt += "\n\n" + memoryBlock;
     }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -79,7 +134,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 2000,
-        system: SYSTEM_PROMPT,
+        system: systemPrompt,
         messages,
       }),
     });
