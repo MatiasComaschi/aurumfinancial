@@ -97,6 +97,29 @@ serve(async (req) => {
     }
 
     const { messages, mode, userMessage, memoryBlock } = await req.json();
+
+    // --- Input size validation ---
+    if (Array.isArray(messages) && messages.length > 60) {
+      return new Response(JSON.stringify({ error: "Too many messages" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (messages?.some((m: any) => typeof m.content === "string" && m.content.length > 20000)) {
+      return new Response(JSON.stringify({ error: "Message too long" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (typeof userMessage === "string" && userMessage.length > 5000) {
+      return new Response(JSON.stringify({ error: "Message too long" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (typeof memoryBlock === "string" && memoryBlock.length > 15000) {
+      return new Response(JSON.stringify({ error: "Memory block too large" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!ANTHROPIC_API_KEY) {
       console.error("ANTHROPIC_API_KEY is not configured");
@@ -105,6 +128,37 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // --- Rate limiting ---
+    const serviceSupabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const rateMode = mode === "extract_memory" ? "chat" : (messages ? "chat" : "analysis");
+    const effectiveMode = mode === "extract_memory" ? "extract_memory" : (messages ? "chat" : "analysis");
+    const today = new Date().toISOString().slice(0, 10);
+    const startOfDay = `${today}T00:00:00.000Z`;
+
+    const { count, error: countError } = await serviceSupabase
+      .from("ai_usage_log")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("mode", rateMode)
+      .gte("created_at", startOfDay);
+
+    if (!countError) {
+      const limit = rateMode === "chat" ? 50 : 10;
+      if ((count ?? 0) >= limit) {
+        return new Response(
+          JSON.stringify({ error: "You've hit your daily limit — come back tomorrow and we'll pick up where we left off." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Log this usage (don't block on failure)
+    serviceSupabase.from("ai_usage_log").insert({ user_id: user.id, mode: rateMode }).then(() => {});
 
     // Memory extraction mode — lightweight call
     if (mode === "extract_memory") {
