@@ -34,7 +34,7 @@ export default function AuthPage() {
         toast.success('Check your email to confirm your account!');
       }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(safeAuthError(err.message));
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ export default function AuthPage() {
       if (error) throw error;
       setResetSent(true);
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(safeAuthError(err.message));
     } finally {
       setLoading(false);
     }
