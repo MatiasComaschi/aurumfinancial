@@ -39,7 +39,7 @@ export default function SettingsTab({
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('plaid_items')
+        .from('plaid_items_safe')
         .select('id, institution_name, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
