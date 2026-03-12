@@ -67,6 +67,52 @@ const MEMORY_EXTRACTION_PROMPT = `Look at this user message and extract any fina
 
 User message: `;
 
+function buildMemoryBlock(memories: Array<{ memory_type: string; content: string; context_date: string | null }>): string {
+  if (memories.length === 0) return '';
+
+  const grouped: Record<string, typeof memories> = {};
+  for (const m of memories) {
+    if (!grouped[m.memory_type]) grouped[m.memory_type] = [];
+    grouped[m.memory_type].push(m);
+  }
+
+  const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString() : '';
+
+  let block = `WHAT YOU ALREADY KNOW ABOUT THIS USER:\n\n`;
+
+  if (grouped.commitment?.length) {
+    block += `Commitments they have made:\n`;
+    grouped.commitment.forEach(m => {
+      block += `- ${m.content} (${formatDate(m.context_date)})\n`;
+    });
+    block += '\n';
+  }
+  if (grouped.goals_context?.length) {
+    block += `Goals context they have shared:\n`;
+    grouped.goals_context.forEach(m => { block += `- ${m.content}\n`; });
+    block += '\n';
+  }
+  if (grouped.habit?.length) {
+    block += `Habits they have acknowledged:\n`;
+    grouped.habit.forEach(m => { block += `- ${m.content}\n`; });
+    block += '\n';
+  }
+  if (grouped.preference?.length) {
+    block += `How they want to be advised:\n`;
+    grouped.preference.forEach(m => { block += `- ${m.content}\n`; });
+    block += '\n';
+  }
+  if (grouped.life_context?.length) {
+    block += `Life context:\n`;
+    grouped.life_context.forEach(m => { block += `- ${m.content}\n`; });
+    block += '\n';
+  }
+
+  block += `IMPORTANT: Use this memory actively in every response. If the user made a commitment and their transactions show they did not follow through, call it out with kindness not shame. If they are following through, acknowledge it and make them feel it. Make the user feel like you have been paying attention the whole time because you have.`;
+
+  return block;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -96,7 +142,7 @@ serve(async (req) => {
       });
     }
 
-    const { messages, mode, userMessage, memoryBlock } = await req.json();
+    const { messages, mode, userMessage } = await req.json();
 
     // --- Input size validation ---
     if (Array.isArray(messages) && messages.length > 60) {
@@ -111,11 +157,6 @@ serve(async (req) => {
     }
     if (typeof userMessage === "string" && userMessage.length > 5000) {
       return new Response(JSON.stringify({ error: "Message too long" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (typeof memoryBlock === "string" && memoryBlock.length > 15000) {
-      return new Response(JSON.stringify({ error: "Memory block too large" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -147,14 +188,21 @@ serve(async (req) => {
       .eq("mode", rateMode)
       .gte("created_at", startOfDay);
 
-    if (!countError) {
-      const limit = rateMode === "chat" ? 50 : 10;
-      if ((count ?? 0) >= limit) {
-        return new Response(
-          JSON.stringify({ error: "You've hit your daily limit — come back tomorrow and we'll pick up where we left off." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    // Fail closed: if rate limit check fails, deny the request
+    if (countError) {
+      console.error("Rate limit check failed:", countError);
+      return new Response(
+        JSON.stringify({ error: "Service temporarily unavailable. Please try again." }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const limit = rateMode === "chat" ? 50 : 10;
+    if ((count ?? 0) >= limit) {
+      return new Response(
+        JSON.stringify({ error: "You've hit your daily limit — come back tomorrow and we'll pick up where we left off." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Log this usage (don't block on failure)
@@ -200,7 +248,17 @@ serve(async (req) => {
       }
     }
 
-    // Normal chat/analysis mode — inject memory block into system prompt
+    // --- Fetch memories server-side ---
+    const { data: memoryRows } = await serviceSupabase
+      .from("user_memory")
+      .select("memory_type, content, context_date")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    const memoryBlock = buildMemoryBlock(memoryRows || []);
+
+    // Normal chat/analysis mode — inject server-built memory block into system prompt
     let systemPrompt = SYSTEM_PROMPT;
     if (memoryBlock) {
       systemPrompt += "\n\n" + memoryBlock;

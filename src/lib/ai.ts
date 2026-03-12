@@ -20,14 +20,12 @@ export function formatGoalsForAI(goals: Goal[]): string {
 export async function analyzeFinances(
   transactions: Transaction[],
   goals: Goal[],
-  memoryBlock: string
 ): Promise<string> {
   const userMessage = `Here are my transactions for the past 60 days:\n${formatTransactionsForAI(transactions)}\n\nMy financial goals:\n${formatGoalsForAI(goals)}\n\nPlease give me a full financial analysis and advisor report.`;
 
   const { data, error } = await supabase.functions.invoke('financial-advisor', {
     body: {
       messages: [{ role: 'user', content: userMessage }],
-      memoryBlock: memoryBlock || undefined,
     },
   });
 
@@ -40,7 +38,6 @@ export async function chatWithAdvisor(
   goals: Goal[],
   chatHistory: ChatMessage[],
   newMessage: string,
-  memoryBlock: string
 ): Promise<string> {
   const contextMessage = `My transaction data (60 days):\n${formatTransactionsForAI(transactions)}\n\nMy goals:\n${formatGoalsForAI(goals)}`;
 
@@ -54,7 +51,6 @@ export async function chatWithAdvisor(
   const { data, error } = await supabase.functions.invoke('financial-advisor', {
     body: {
       messages,
-      memoryBlock: memoryBlock || undefined,
     },
   });
 

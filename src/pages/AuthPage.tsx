@@ -60,6 +60,16 @@ export default function AuthPage() {
     }
   };
 
+  const safeAuthError = (msg: string): string => {
+    const map: Record<string, string> = {
+      'Invalid login credentials': 'Email or password is incorrect.',
+      'User already registered': 'An account with this email already exists. Try signing in.',
+      'Email not confirmed': 'Please confirm your email before signing in.',
+      'Signup requires a valid password': 'Please enter a valid password.',
+    };
+    return map[msg] ?? 'Something went wrong. Please try again.';
+  };
+
   const handleGoogleSignIn = async () => {
     const { error } = await lovable.auth.signInWithOAuth('google', {
       redirect_uri: window.location.origin,

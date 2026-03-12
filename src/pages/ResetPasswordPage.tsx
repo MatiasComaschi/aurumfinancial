@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
       toast.success('Password updated! Redirecting...');
       setTimeout(() => navigate('/'), 1500);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update password');
+      toast.error('Failed to update password. Please try again.');
     } finally {
       setLoading(false);
     }
