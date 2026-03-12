@@ -69,15 +69,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "goals_linked_account_id_fkey"
-            columns: ["linked_account_id"]
-            isOneToOne: false
-            referencedRelation: "plaid_items"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       plaid_items: {
         Row: {
