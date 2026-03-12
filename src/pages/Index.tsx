@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlaidTransactions } from '@/hooks/usePlaidTransactions';
 import { useGoals } from '@/hooks/useGoals';
@@ -11,12 +10,13 @@ import OverviewTab from '@/components/OverviewTab';
 import TransactionsTab from '@/components/TransactionsTab';
 import AdviceTab from '@/components/AdviceTab';
 import AskTab from '@/components/AskTab';
-import PlaidLinkButton from '@/components/PlaidLinkButton';
+
 import GoalsModal from '@/components/GoalsModal';
+import SettingsTab from '@/components/SettingsTab';
 import { analyzeFinances, chatWithAdvisor, parseAdviceSections } from '@/lib/ai';
 import { ChatMessage } from '@/lib/types';
 
-type TabId = 'overview' | 'transactions' | 'advice' | 'ask';
+type TabId = 'overview' | 'transactions' | 'advice' | 'ask' | 'settings';
 
 export default function Index() {
   const { user, signOut } = useAuth();
@@ -95,21 +95,9 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background flex justify-center">
       <div className="w-full max-w-[480px] px-4 pt-6 pb-20">
-        <header className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-heading text-primary">Aurum</h1>
-            <p className="text-xs font-body text-muted-foreground">Hey {displayName} 👋</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <PlaidLinkButton onSuccess={handlePlaidSuccess} />
-            <button
-              onClick={signOut}
-              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
-              title="Sign out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+        <header className="mb-6">
+          <h1 className="text-2xl font-heading text-primary">Aurum</h1>
+          <p className="text-xs font-body text-muted-foreground">Hey {displayName} 👋</p>
         </header>
 
         {activeTab === 'overview' && (
@@ -139,6 +127,14 @@ export default function Index() {
         {activeTab === 'advice' && <AdviceTab sections={adviceSections} isLoading={isAnalyzing} />}
         {activeTab === 'ask' && (
           <AskTab messages={chatMessages} onSend={handleChatSend} isLoading={isChatLoading} />
+        )}
+        {activeTab === 'settings' && (
+          <SettingsTab
+            accounts={accounts}
+            onPlaidSuccess={handlePlaidSuccess}
+            onSignOut={signOut}
+            onRefreshTransactions={fetchTransactions}
+          />
         )}
 
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />

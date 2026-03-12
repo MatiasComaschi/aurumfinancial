@@ -1,12 +1,13 @@
-import { BarChart3, List, Lightbulb, MessageCircle } from 'lucide-react';
+import { BarChart3, List, Lightbulb, MessageCircle, Settings } from 'lucide-react';
 
-type TabId = 'overview' | 'transactions' | 'advice' | 'ask';
+type TabId = 'overview' | 'transactions' | 'advice' | 'ask' | 'settings';
 
 const tabs: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
   { id: 'transactions', label: 'Transactions', icon: List },
   { id: 'advice', label: 'Advice', icon: Lightbulb },
   { id: 'ask', label: 'Ask', icon: MessageCircle },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 interface TabBarProps {
