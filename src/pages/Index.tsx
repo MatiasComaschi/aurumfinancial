@@ -141,6 +141,14 @@ export default function Index() {
         {activeTab === 'ask' && (
           <AskTab messages={chatMessages} onSend={handleChatSend} isLoading={isChatLoading} />
         )}
+        {activeTab === 'settings' && (
+          <SettingsTab
+            accounts={accounts}
+            onPlaidSuccess={handlePlaidSuccess}
+            onSignOut={signOut}
+            onRefreshTransactions={fetchTransactions}
+          />
+        )}
 
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
