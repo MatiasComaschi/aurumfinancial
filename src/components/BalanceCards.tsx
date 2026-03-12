@@ -24,7 +24,11 @@ export default function BalanceCards({ accounts }: BalanceCardsProps) {
   const total = visibleAccounts.reduce((sum, a) => sum + (a.current_balance ?? 0), 0);
 
   const handleRemove = (accountId: string) => {
-    setHiddenIds(prev => new Set(prev).add(accountId));
+    setHiddenIds(prev => {
+      const next = new Set(prev).add(accountId);
+      localStorage.setItem(HIDDEN_ACCOUNTS_KEY, JSON.stringify([...next]));
+      return next;
+    });
   };
 
   return (

@@ -116,7 +116,7 @@ export default function GoalsModal({ open, onClose, goals, accounts, onAdd, onUp
                 >
                   <option value="">No linked account (manual)</option>
                   {accounts.map(a => (
-                    <option key={a.plaid_item_id} value={a.plaid_item_id}>
+                    <option key={a.account_id} value={a.account_id}>
                       {a.name} — {a.institution_name}
                     </option>
                   ))}

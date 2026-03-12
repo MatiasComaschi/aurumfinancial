@@ -23,7 +23,7 @@ export function useGoals(accounts: PlaidAccount[]) {
       // Update goals with linked account balances
       const updated = (data || []).map((g: any) => {
         if (g.linked_account_id && accounts.length > 0) {
-          const linkedAcct = accounts.find(a => a.plaid_item_id === g.linked_account_id);
+          const linkedAcct = accounts.find(a => a.account_id === g.linked_account_id);
           if (linkedAcct && linkedAcct.current_balance !== null) {
             return { ...g, current_amount: Math.max(0, linkedAcct.current_balance) };
           }
